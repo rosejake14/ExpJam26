@@ -6,6 +6,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "InventoryComponent.h"
+#include "InteractionPromptHandler.h"
 #include "EnhancedInputComponent.h"
 #include "InputAction.h"
 #include "GameFramework/Pawn.h"
@@ -33,7 +34,6 @@ AItemPickup::AItemPickup()
 
 	// subscribe to the collision overlap on the sphere
 	CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AItemPickup::OnOverlap);
-	CollisionSphere->OnComponentEndOverlap.AddDynamic(this, &AItemPickup::OnEndOverlap);
 
 	// create the mesh
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
@@ -59,6 +59,9 @@ void AItemPickup::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	// clear the respawn timer
 	GetWorld()->GetTimerManager().ClearTimer(RespawnTimer);
+
+	// clear the interaction range check timer
+	GetWorld()->GetTimerManager().ClearTimer(InteractionRangeCheckTimer);
 }
 
 void AItemPickup::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -97,22 +100,30 @@ void AItemPickup::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 			}
 		}
 
-		// let Blueprint show a "press E to pick up" prompt
-		BP_OnInteractableChanged(true);
+		// show a "press E to pick up" prompt on the interactor's HUD
+		if (OtherActor->Implements<UInteractionPromptHandler>())
+		{
+			const FText PromptText = FText::Format(NSLOCTEXT("ItemPickup", "InteractionPrompt", "Press E to pick up {0}"), Item->DisplayName);
+			IInteractionPromptHandler::Execute_ShowInteractionPrompt(OtherActor, PromptText);
+		}
+
+		// start polling for the interactor leaving range, since OnComponentEndOverlap isn't reliable here
+		GetWorld()->GetTimerManager().SetTimer(InteractionRangeCheckTimer, this, &AItemPickup::CheckInteractionRange, 0.2f, true);
+
 		return;
 	}
 
 	GiveItem(Inventory);
 }
 
-void AItemPickup::OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+void AItemPickup::CheckInteractionRange()
 {
-	if (!bRequiresInteraction || OtherActor != InteractingActor.Get())
-	{
-		return;
-	}
+	AActor* Interactor = InteractingActor.Get();
 
-	StopInteracting();
+	if (!Interactor || FVector::Dist(Interactor->GetActorLocation(), GetActorLocation()) > CollisionSphere->GetScaledSphereRadius())
+	{
+		StopInteracting();
+	}
 }
 
 void AItemPickup::Interact()
@@ -167,8 +178,15 @@ void AItemPickup::GiveItem(UInventoryComponent* Inventory)
 
 void AItemPickup::StopInteracting()
 {
+	GetWorld()->GetTimerManager().ClearTimer(InteractionRangeCheckTimer);
+
 	if (AActor* Interactor = InteractingActor.Get())
 	{
+		if (Interactor->Implements<UInteractionPromptHandler>())
+		{
+			IInteractionPromptHandler::Execute_HideInteractionPrompt(Interactor);
+		}
+
 		if (APawn* Pawn = Cast<APawn>(Interactor))
 		{
 			if (APlayerController* PlayerController = Pawn->GetController<APlayerController>())
@@ -184,8 +202,6 @@ void AItemPickup::StopInteracting()
 	}
 
 	InteractingActor = nullptr;
-
-	BP_OnInteractableChanged(false);
 }
 
 void AItemPickup::RespawnPickup()

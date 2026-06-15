@@ -57,6 +57,9 @@ protected:
 	/** Timer to respawn the pickup */
 	FTimerHandle RespawnTimer;
 
+	/** Periodically checks whether InteractingActor has moved out of range */
+	FTimerHandle InteractionRangeCheckTimer;
+
 public:
 
 	/** Constructor */
@@ -78,15 +81,14 @@ protected:
 	UFUNCTION()
 	virtual void OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	/** Handles the end of a collision overlap */
-	UFUNCTION()
-	virtual void OnEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
 	/** Attempts to add Item to Inventory, then handles respawn/destruction if any were added */
 	void GiveItem(UInventoryComponent* Inventory);
 
-	/** Stops tracking InteractingActor, unbinds its interact input, and notifies Blueprint that this pickup is no longer interactable */
+	/** Stops tracking InteractingActor, unbinds its interact input, and hides its interaction prompt */
 	void StopInteracting();
+
+	/** Polls InteractingActor's distance from this pickup, calling StopInteracting() once it leaves CollisionSphere's radius */
+	void CheckInteractionRange();
 
 	/** Called when it's time to respawn this pickup */
 	void RespawnPickup();
@@ -98,8 +100,4 @@ protected:
 	/** Enables this pickup after respawning */
 	UFUNCTION(BlueprintCallable, Category="Pickup")
 	void FinishRespawn();
-
-	/** Passes control to Blueprint when an actor comes into range (true) or leaves/collects (false). Only called if bRequiresInteraction is true */
-	UFUNCTION(BlueprintImplementableEvent, Category="Pickup", meta = (DisplayName = "On Interactable Changed"))
-	void BP_OnInteractableChanged(bool bCanInteract);
 };
