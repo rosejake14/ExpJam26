@@ -25,6 +25,8 @@ public class ExpJam26 : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] {
 			"ExpJam26",
+			"ExpJam26/Inventory",
+			"ExpJam26/Inventory/UI",
 			"ExpJam26/Variant_Horror",
 			"ExpJam26/Variant_Horror/UI",
 			"ExpJam26/Variant_Shooter",
