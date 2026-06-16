@@ -15,6 +15,7 @@ public class ExpJam26 : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",
+			"NavigationSystem",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
@@ -32,7 +33,8 @@ public class ExpJam26 : ModuleRules
 			"ExpJam26/Variant_Shooter",
 			"ExpJam26/Variant_Shooter/AI",
 			"ExpJam26/Variant_Shooter/UI",
-			"ExpJam26/Variant_Shooter/Weapons"
+			"ExpJam26/Variant_Shooter/Weapons",
+			"ExpJam26/Customer"
 		});
 
 		// Uncomment if you are using Slate UI
