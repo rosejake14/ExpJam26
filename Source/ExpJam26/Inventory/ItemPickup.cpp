@@ -104,7 +104,7 @@ void AItemPickup::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 		if (OtherActor->Implements<UInteractionPromptHandler>())
 		{
 			const FText PromptText = FText::Format(NSLOCTEXT("ItemPickup", "InteractionPrompt", "Press E to pick up {0}"), Item->DisplayName);
-			IInteractionPromptHandler::Execute_ShowInteractionPrompt(OtherActor, PromptText);
+			IInteractionPromptHandler::Execute_ShowInteractionPrompt(OtherActor, this, PromptText);
 		}
 
 		// start polling for the interactor leaving range, since OnComponentEndOverlap isn't reliable here
@@ -187,7 +187,7 @@ void AItemPickup::StopInteracting()
 	{
 		if (Interactor->Implements<UInteractionPromptHandler>())
 		{
-			IInteractionPromptHandler::Execute_HideInteractionPrompt(Interactor);
+			IInteractionPromptHandler::Execute_HideInteractionPrompt(Interactor, this);
 		}
 
 		if (APawn* Pawn = Cast<APawn>(Interactor))

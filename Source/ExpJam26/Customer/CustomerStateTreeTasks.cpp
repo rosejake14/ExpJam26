@@ -214,6 +214,7 @@ EStateTreeRunStatus FStateTreeGoToShopTask::EnterState(FStateTreeExecutionContex
 
 		const FVector SlotPosition = Queue->JoinQueue(Character);
 		InstanceData.bHasJoinedQueue = true;
+		InstanceData.bWasOrderVisit = Character->bHasActiveRequest;
 
 		InstanceData.Controller->MoveToLocation(SlotPosition);
 
@@ -238,9 +239,31 @@ EStateTreeRunStatus FStateTreeGoToShopTask::Tick(FStateTreeExecutionContext& Con
 	FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 	ACustomerNPC* Character = InstanceData.Character;
 
-	// counting down purchase time at the front of the queue
+	// waiting at the front of the queue
 	if (InstanceData.bIsWaitingAtFront)
 	{
+		if (InstanceData.bWasOrderVisit)
+		{
+			// hold position until the player delivers the requested item
+			if (!Character->bHasActiveRequest)
+			{
+				if (IsValid(Character->ShopActor))
+				{
+					if (UShopQueueComponent* Queue = Character->ShopActor->FindComponentByClass<UShopQueueComponent>())
+					{
+						Queue->LeaveQueue(Character);
+						InstanceData.bAlreadyLeftQueue = true;
+					}
+				}
+
+				Character->bWantsToGoToShop = false;
+				return EStateTreeRunStatus::Succeeded;
+			}
+
+			return EStateTreeRunStatus::Running;
+		}
+
+		// normal (non-order) shop visit: count down and leave
 		InstanceData.PurchaseTimeRemaining -= DeltaTime;
 
 		if (InstanceData.PurchaseTimeRemaining <= 0.0f)

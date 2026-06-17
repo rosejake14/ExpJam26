@@ -14,6 +14,8 @@
 #include "TimerManager.h"
 #include "Inventory/CraftingRecipe.h"
 #include "Inventory/InventoryComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ACustomerNPC::ACustomerNPC()
 {
@@ -37,6 +39,13 @@ ACustomerNPC::ACustomerNPC()
 	DialogueWidget->SetWidgetSpace(EWidgetSpace::World);
 	DialogueWidget->SetDrawAtDesiredSize(true);
 	DialogueWidget->SetHiddenInGame(true);
+
+	// order arrow — mesh and material assigned in Blueprint; hidden until player holds the requested item
+	OrderArrow = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("OrderArrow"));
+	OrderArrow->SetupAttachment(RootComponent);
+	OrderArrow->SetRelativeLocation(FVector(0.0f, 0.0f, 300.0f));
+	OrderArrow->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	OrderArrow->SetHiddenInGame(true);
 }
 
 void ACustomerNPC::BeginPlay()
@@ -95,7 +104,7 @@ void ACustomerNPC::OnInteractionSphereOverlap(UPrimitiveComponent* OverlappedCom
 	// show the "Press E to talk" prompt on the player's HUD
 	if (OtherActor->Implements<UInteractionPromptHandler>())
 	{
-		IInteractionPromptHandler::Execute_ShowInteractionPrompt(OtherActor,
+		IInteractionPromptHandler::Execute_ShowInteractionPrompt(OtherActor, this,
 			NSLOCTEXT("CustomerNPC", "TalkPrompt", "Press E to talk"));
 	}
 
@@ -242,7 +251,7 @@ void ACustomerNPC::StopInteractingPlayer()
 	{
 		if (Player->Implements<UInteractionPromptHandler>())
 		{
-			IInteractionPromptHandler::Execute_HideInteractionPrompt(Player);
+			IInteractionPromptHandler::Execute_HideInteractionPrompt(Player, this);
 		}
 
 		if (APawn* Pawn = Cast<APawn>(Player))
@@ -266,6 +275,11 @@ void ACustomerNPC::AcceptRequest()
 {
 	bShowingRecipePrompt = false;
 	bHasActiveRequest = true;
+
+	// send the NPC straight to the shop to wait for delivery
+	bWantsToGoToShop = true;
+	OnWantsToGoToShop.Broadcast();
+
 	BP_OnRecipeRequestAccepted(ActiveRequest);
 	EndInteraction();
 }
@@ -305,6 +319,7 @@ void ACustomerNPC::TryDeliverRequest()
 		Inventory->RemoveItem(Required.Item, Required.Quantity);
 		bHasActiveRequest = false;
 		ActiveRequest = nullptr;
+		if (OrderArrow) { OrderArrow->SetHiddenInGame(true); }
 		BP_OnRecipeRequestCompleted();
 	}
 	else
@@ -313,6 +328,35 @@ void ACustomerNPC::TryDeliverRequest()
 	}
 
 	EndInteraction();
+}
+
+void ACustomerNPC::RefreshOrderArrow()
+{
+	if (!OrderArrow) { return; }
+
+	if (!bHasActiveRequest || !ActiveRequest)
+	{
+		OrderArrow->SetHiddenInGame(true);
+		return;
+	}
+
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (!PlayerPawn)
+	{
+		OrderArrow->SetHiddenInGame(true);
+		return;
+	}
+
+	UInventoryComponent* Inventory = PlayerPawn->FindComponentByClass<UInventoryComponent>();
+	if (!Inventory)
+	{
+		OrderArrow->SetHiddenInGame(true);
+		return;
+	}
+
+	const FItemStack& Result = ActiveRequest->Result;
+	const bool bPlayerHasItem = Result.Item && Inventory->GetItemCount(Result.Item) >= Result.Quantity;
+	OrderArrow->SetHiddenInGame(!bPlayerHasItem);
 }
 
 void ACustomerNPC::AdvanceToQueuePosition(FVector NewPosition)

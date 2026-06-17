@@ -198,6 +198,10 @@ struct FStateTreeGoToShopTaskInstanceData
 	/** Remaining seconds before the NPC leaves the front of the queue */
 	UPROPERTY(EditAnywhere, Category="Output")
 	float PurchaseTimeRemaining = 0.0f;
+
+	/** True when this shop visit was triggered by an accepted order request; NPC waits until the order is fulfilled */
+	UPROPERTY(EditAnywhere, Category="Output")
+	bool bWasOrderVisit = false;
 };
 
 /** Joins the shop queue, walks to the assigned slot, waits when at the front, then leaves. */

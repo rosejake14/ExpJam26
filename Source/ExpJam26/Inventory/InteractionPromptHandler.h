@@ -22,11 +22,17 @@ class EXPJAM26_API IInteractionPromptHandler
 
 public:
 
-	/** Shows an interaction prompt with the given text, e.g. "Press E to pick up Wood" */
+	/**
+	 * Registers a prompt from Source with the given text.
+	 * The player tracks all active sources; whichever registered most recently is shown.
+	 */
 	UFUNCTION(BlueprintImplementableEvent, Category="Interaction")
-	void ShowInteractionPrompt(const FText& PromptText);
+	void ShowInteractionPrompt(UObject* Source, const FText& PromptText);
 
-	/** Hides the interaction prompt */
+	/**
+	 * Removes Source's prompt registration.
+	 * If other sources are still active, their prompt is restored; otherwise the widget hides.
+	 */
 	UFUNCTION(BlueprintImplementableEvent, Category="Interaction")
-	void HideInteractionPrompt();
+	void HideInteractionPrompt(UObject* Source);
 };

@@ -8,6 +8,7 @@
 
 class USphereComponent;
 class UWidgetComponent;
+class UStaticMeshComponent;
 class UInputAction;
 class UCraftingRecipe;
 class UInventoryComponent;
@@ -30,6 +31,10 @@ class EXPJAM26_API ACustomerNPC : public ACharacter
 	/** World-space widget shown above the NPC's head during dialogue */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	UWidgetComponent* DialogueWidget;
+
+	/** Arrow mesh shown above the NPC (through walls) when the player is holding the requested item */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	UStaticMeshComponent* OrderArrow;
 
 protected:
 
@@ -161,6 +166,13 @@ public:
 
 	/** Called by UShopQueueComponent when the queue shifts; issues a fresh MoveToLocation */
 	void AdvanceToQueuePosition(FVector NewPosition);
+
+	/**
+	 * Shows the OrderArrow if the player currently holds the requested crafted item, hides it otherwise.
+	 * Bind this to the player inventory's OnInventoryUpdated in Blueprint after accepting a request.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Customer|Request")
+	void RefreshOrderArrow();
 
 	/** Increments the roam cycle counter; triggers shop visit when threshold is reached */
 	void OnRoamCycleCompleted();
