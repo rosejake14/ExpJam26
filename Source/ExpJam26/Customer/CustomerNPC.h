@@ -12,6 +12,7 @@ class UStaticMeshComponent;
 class UInputAction;
 class UCraftingRecipe;
 class UInventoryComponent;
+class UMoneyComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCustomerNPCInteractionChangedDelegate);
 
@@ -57,6 +58,14 @@ protected:
 	/** Pool of recipes this NPC can randomly request from the player */
 	UPROPERTY(EditAnywhere, Category="Customer|Request")
 	TArray<TObjectPtr<UCraftingRecipe>> RequestableRecipes;
+
+	/** Minimum money awarded to the player when an order is delivered */
+	UPROPERTY(EditAnywhere, Category="Customer|Request", meta=(ClampMin=0))
+	int32 MinOrderReward = 5;
+
+	/** Maximum money awarded to the player when an order is delivered */
+	UPROPERTY(EditAnywhere, Category="Customer|Request", meta=(ClampMin=0))
+	int32 MaxOrderReward = 50;
 
 public:
 

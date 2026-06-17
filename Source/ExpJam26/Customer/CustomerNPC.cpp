@@ -14,6 +14,7 @@
 #include "TimerManager.h"
 #include "Inventory/CraftingRecipe.h"
 #include "Inventory/InventoryComponent.h"
+#include "Inventory/MoneyComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -320,6 +321,12 @@ void ACustomerNPC::TryDeliverRequest()
 		bHasActiveRequest = false;
 		ActiveRequest = nullptr;
 		if (OrderArrow) { OrderArrow->SetHiddenInGame(true); }
+
+		if (UMoneyComponent* Money = Player->FindComponentByClass<UMoneyComponent>())
+		{
+			Money->AddMoney(FMath::RandRange(MinOrderReward, MaxOrderReward));
+		}
+
 		BP_OnRecipeRequestCompleted();
 	}
 	else
