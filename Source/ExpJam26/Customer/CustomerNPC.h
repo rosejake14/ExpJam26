@@ -9,6 +9,8 @@
 class USphereComponent;
 class UWidgetComponent;
 class UInputAction;
+class UCraftingRecipe;
+class UInventoryComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCustomerNPCInteractionChangedDelegate);
 
@@ -39,19 +41,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Customer|Interaction")
 	TObjectPtr<UInputAction> InteractAction;
 
+	/** Input action bound to declining a recipe request (e.g. IA_Decline / F key) */
+	UPROPERTY(EditDefaultsOnly, Category="Customer|Interaction")
+	TObjectPtr<UInputAction> DeclineAction;
+
 	/** Lines of dialogue cycled through when the player presses E */
 	UPROPERTY(EditAnywhere, Category="Customer|Dialogue")
 	TArray<FText> DialogueLines;
 
+	/** Pool of recipes this NPC can randomly request from the player */
+	UPROPERTY(EditAnywhere, Category="Customer|Request")
+	TArray<TObjectPtr<UCraftingRecipe>> RequestableRecipes;
+
 public:
 
-	/** Maximum distance the NPC will roam from its center point */
+	/** Maximum distance the NPC will roam from where it was placed in the level */
 	UPROPERTY(EditAnywhere, Category="Customer|Roam")
 	float RoamRadius = 1500.0f;
-
-	/** Explicit roam center; if zero-vector, captured from spawn location at BeginPlay */
-	UPROPERTY(EditAnywhere, Category="Customer|Roam")
-	FVector RoamCenter = FVector::ZeroVector;
 
 protected:
 
@@ -84,6 +90,14 @@ public:
 
 	/** True when this NPC has decided to go to the shop on the next roam cycle */
 	bool bWantsToGoToShop = false;
+
+	/** True while this NPC is waiting for the player to deliver a crafted item */
+	UPROPERTY(BlueprintReadOnly, Category="Customer|Request")
+	bool bHasActiveRequest = false;
+
+	/** The recipe this NPC is currently requesting; null when no request is active */
+	UPROPERTY(BlueprintReadOnly, Category="Customer|Request")
+	TObjectPtr<UCraftingRecipe> ActiveRequest;
 
 	/** Broadcast when the player begins a dialogue with this NPC */
 	UPROPERTY(BlueprintAssignable)
@@ -171,6 +185,38 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category="Customer|Dialogue")
 	void BP_OnDialogueLineChanged(const FText& NewLine);
 
+	/**
+	 * Called after the last dialogue line when this NPC has a recipe to request.
+	 * Override in Blueprint to show the accept/decline choice UI.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Customer|Request")
+	void BP_OnShowRecipePrompt(UCraftingRecipe* Recipe);
+
+	/**
+	 * Called when the player presses E to accept a recipe request.
+	 * Override in Blueprint to spawn the order-tracker HUD widget and close the dialogue panel.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Customer|Request")
+	void BP_OnRecipeRequestAccepted(UCraftingRecipe* Recipe);
+
+	/** Called when the player presses the decline key. Override in Blueprint to clean up the prompt UI. */
+	UFUNCTION(BlueprintImplementableEvent, Category="Customer|Request")
+	void BP_OnRecipeRequestDeclined();
+
+	/**
+	 * Called when the player returns with the requested crafted item and it is successfully removed.
+	 * Override in Blueprint to dismiss the order-tracker HUD and play a reward effect.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Customer|Request")
+	void BP_OnRecipeRequestCompleted();
+
+	/**
+	 * Called when the player interacts while a request is active but does not yet have the item.
+	 * Override in Blueprint to show a brief "not ready yet" response.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="Customer|Request")
+	void BP_OnDeliveryFailed();
+
 private:
 
 	/** Clears the input binding, hides the prompt, and stops the range-check timer */
@@ -178,4 +224,20 @@ private:
 
 	/** Randomizes the number of roam cycles before the next shop visit */
 	void RandomizeNextShopTripCycles();
+
+	/** True when the NPC has shown the recipe prompt and is waiting for the player to accept/decline */
+	bool bShowingRecipePrompt = false;
+
+	/** Player accepted the recipe prompt — marks active request and ends dialogue */
+	void AcceptRequest();
+
+	/** Player pressed the decline key — clears the recipe choice and ends dialogue */
+	void DeclineRequest();
+
+	/**
+	 * Checks if the player's inventory contains the requested crafted item.
+	 * On success removes it and fires BP_OnRecipeRequestCompleted.
+	 * On failure fires BP_OnDeliveryFailed.
+	 */
+	void TryDeliverRequest();
 };

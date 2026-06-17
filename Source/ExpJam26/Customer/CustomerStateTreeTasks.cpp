@@ -3,6 +3,7 @@
 
 #include "CustomerStateTreeTasks.h"
 #include "StateTreeExecutionContext.h"
+#include "StateTreeAsyncExecutionContext.h"
 #include "CustomerNPC.h"
 #include "CustomerAIController.h"
 #include "ShopQueueComponent.h"

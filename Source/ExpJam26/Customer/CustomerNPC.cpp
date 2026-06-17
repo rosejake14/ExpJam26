@@ -12,6 +12,8 @@
 #include "AIController.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "Inventory/CraftingRecipe.h"
+#include "Inventory/InventoryComponent.h"
 
 ACustomerNPC::ACustomerNPC()
 {
@@ -75,14 +77,18 @@ void ACustomerNPC::OnInteractionSphereOverlap(UPrimitiveComponent* OverlappedCom
 
 	InteractingPlayer = OtherActor;
 
-	// enable input on this NPC actor so it can receive the interact action
-	EnableInput(PlayerController);
+	// bypass APawn::EnableInput's "own controller only" restriction by calling AActor's version directly
+	AActor::EnableInput(PlayerController);
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
 	{
 		if (InteractAction)
 		{
 			EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &ACustomerNPC::Interact);
+		}
+		if (DeclineAction)
+		{
+			EIC->BindAction(DeclineAction, ETriggerEvent::Started, this, &ACustomerNPC::DeclineRequest);
 		}
 	}
 
@@ -127,12 +133,25 @@ void ACustomerNPC::Interact()
 		return;
 	}
 
+	// E on the recipe prompt = accept
+	if (bShowingRecipePrompt)
+	{
+		AcceptRequest();
+		return;
+	}
+
 	// advance to the next dialogue line
 	++CurrentDialogueIndex;
 
 	if (CurrentDialogueIndex < DialogueLines.Num())
 	{
 		BP_OnDialogueLineChanged(DialogueLines[CurrentDialogueIndex]);
+	}
+	else if (ActiveRequest)
+	{
+		// finished all dialogue lines — offer the recipe request
+		bShowingRecipePrompt = true;
+		BP_OnShowRecipePrompt(ActiveRequest);
 	}
 	else
 	{
@@ -151,19 +170,33 @@ void ACustomerNPC::BeginInteraction(AActor* Player)
 		AIController->SetFocus(Player);
 	}
 
-	// show the floating dialogue bubble and display the first line
+	// if waiting for a delivery, skip dialogue and go straight to the check
+	if (bHasActiveRequest)
+	{
+		TryDeliverRequest();
+		return;
+	}
+
+	// pick a random recipe to offer at the end of this conversation
+	if (RequestableRecipes.Num() > 0)
+	{
+		ActiveRequest = RequestableRecipes[FMath::RandRange(0, RequestableRecipes.Num() - 1)];
+	}
+
+	// show the floating dialogue bubble
 	if (DialogueWidget)
 	{
 		DialogueWidget->SetHiddenInGame(false);
 	}
+
+	// create the HUD widget first, then push the first line into it
+	BP_OnInteractionBegan(Player);
 
 	if (DialogueLines.Num() > 0)
 	{
 		BP_OnDialogueLineChanged(DialogueLines[0]);
 	}
 
-	// notify Blueprint (to show HUD widget) and StateTree (to block movement)
-	BP_OnInteractionBegan(Player);
 	OnInteractionStarted.Broadcast();
 }
 
@@ -171,6 +204,14 @@ void ACustomerNPC::EndInteraction()
 {
 	bIsBeingInteracted = false;
 	CurrentDialogueIndex = 0;
+
+	// if the player walked away while the prompt was showing, treat it as a decline
+	if (bShowingRecipePrompt)
+	{
+		bShowingRecipePrompt = false;
+		ActiveRequest = nullptr;
+		BP_OnRecipeRequestDeclined();
+	}
 
 	// clear NPC focus so it stops staring at the player
 	if (AAIController* AIController = GetController<AAIController>())
@@ -213,12 +254,65 @@ void ACustomerNPC::StopInteractingPlayer()
 					EIC->ClearActionBindings();
 				}
 
-				DisableInput(PC);
+				AActor::DisableInput(PC);
 			}
 		}
 	}
 
 	InteractingPlayer = nullptr;
+}
+
+void ACustomerNPC::AcceptRequest()
+{
+	bShowingRecipePrompt = false;
+	bHasActiveRequest = true;
+	BP_OnRecipeRequestAccepted(ActiveRequest);
+	EndInteraction();
+}
+
+void ACustomerNPC::DeclineRequest()
+{
+	if (!bIsBeingInteracted || !bShowingRecipePrompt)
+	{
+		return;
+	}
+
+	bShowingRecipePrompt = false;
+	ActiveRequest = nullptr;
+	BP_OnRecipeRequestDeclined();
+	EndInteraction();
+}
+
+void ACustomerNPC::TryDeliverRequest()
+{
+	AActor* Player = InteractingPlayer.Get();
+	if (!Player || !ActiveRequest)
+	{
+		EndInteraction();
+		return;
+	}
+
+	UInventoryComponent* Inventory = Player->FindComponentByClass<UInventoryComponent>();
+	if (!Inventory)
+	{
+		EndInteraction();
+		return;
+	}
+
+	const FItemStack& Required = ActiveRequest->Result;
+	if (Inventory->GetItemCount(Required.Item) >= Required.Quantity)
+	{
+		Inventory->RemoveItem(Required.Item, Required.Quantity);
+		bHasActiveRequest = false;
+		ActiveRequest = nullptr;
+		BP_OnRecipeRequestCompleted();
+	}
+	else
+	{
+		BP_OnDeliveryFailed();
+	}
+
+	EndInteraction();
 }
 
 void ACustomerNPC::AdvanceToQueuePosition(FVector NewPosition)
@@ -244,7 +338,7 @@ void ACustomerNPC::OnRoamCycleCompleted()
 
 FVector ACustomerNPC::GetEffectiveRoamCenter() const
 {
-	return RoamCenter.IsNearlyZero() ? SpawnLocation : RoamCenter;
+	return SpawnLocation;
 }
 
 void ACustomerNPC::RandomizeNextShopTripCycles()
