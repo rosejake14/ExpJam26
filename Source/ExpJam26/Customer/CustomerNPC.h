@@ -195,6 +195,9 @@ public:
 	/** Called by UShopQueueComponent when the queue shifts; issues a fresh MoveToLocation */
 	void AdvanceToQueuePosition(FVector NewPosition);
 
+	/** Returns true if this NPC is currently in active dialogue with the given player */
+	bool IsInDialogueWith(const AActor* Player) const { return bIsBeingInteracted && InteractingPlayer.Get() == Player; }
+
 	/**
 	 * Shows the OrderArrow if the player currently holds the requested crafted item, hides it otherwise.
 	 * Bind this to the player inventory's OnInventoryUpdated in Blueprint after accepting a request.

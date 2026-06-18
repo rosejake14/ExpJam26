@@ -17,6 +17,7 @@
 #include "Inventory/MoneyComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "EngineUtils.h"
 #include "Sound/SoundBase.h"
 
 ACustomerNPC::ACustomerNPC()
@@ -56,6 +57,7 @@ void ACustomerNPC::BeginPlay()
 
 	SpawnLocation = GetActorLocation();
 	RandomizeNextShopTripCycles();
+	RoamCyclesCompleted = FMath::RandRange(0, FMath::Max(0, TargetRoamCycles - 1));
 	ScheduleNextIdleSound();
 }
 
@@ -88,6 +90,18 @@ void ACustomerNPC::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	GetWorld()->GetTimerManager().ClearTimer(IdleSoundTimer);
 }
 
+static bool IsPlayerInDialogue(UWorld* World, const AActor* Player)
+{
+	for (TActorIterator<ACustomerNPC> It(World); It; ++It)
+	{
+		if (It->IsInDialogueWith(Player))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void ACustomerNPC::OnInteractionSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -109,6 +123,12 @@ void ACustomerNPC::OnInteractionSphereOverlap(UPrimitiveComponent* OverlappedCom
 		return;
 	}
 
+	// don't show a prompt if the player is already in dialogue with another NPC
+	if (IsPlayerInDialogue(GetWorld(), OtherActor))
+	{
+		return;
+	}
+
 	InteractingPlayer = OtherActor;
 
 	// bypass APawn::EnableInput's "own controller only" restriction by calling AActor's version directly
@@ -126,7 +146,6 @@ void ACustomerNPC::OnInteractionSphereOverlap(UPrimitiveComponent* OverlappedCom
 		}
 	}
 
-	// show the "Press E to talk" prompt on the player's HUD
 	if (OtherActor->Implements<UInteractionPromptHandler>())
 	{
 		IInteractionPromptHandler::Execute_ShowInteractionPrompt(OtherActor, this,
@@ -195,7 +214,22 @@ void ACustomerNPC::Interact()
 
 void ACustomerNPC::BeginInteraction(AActor* Player)
 {
+	// Prevent starting dialogue if the player is already talking to another NPC
+	for (TActorIterator<ACustomerNPC> It(GetWorld()); It; ++It)
+	{
+		if (*It != this && It->IsInDialogueWith(Player))
+		{
+			return;
+		}
+	}
+
 	bIsBeingInteracted = true;
+
+	// hide the interact prompt for the duration of dialogue
+	if (Player->Implements<UInteractionPromptHandler>())
+	{
+		IInteractionPromptHandler::Execute_HideInteractionPrompt(Player, this);
+	}
 
 	// stop movement and face the player
 	if (AAIController* AIController = GetController<AAIController>())
@@ -261,6 +295,22 @@ void ACustomerNPC::EndInteraction()
 	HideDialogueWidget();
 	BP_OnInteractionEnded();
 	OnInteractionEnded.Broadcast();
+
+	// If the player is still nearby, re-show the prompt and let the range timer
+	// handle cleanup when they eventually walk away.
+	if (AActor* Player = InteractingPlayer.Get())
+	{
+		const float MaxDist = InteractionSphere->GetScaledSphereRadius() + 50.0f;
+		if (FVector::Dist2D(Player->GetActorLocation(), GetActorLocation()) <= MaxDist)
+		{
+			if (Player->Implements<UInteractionPromptHandler>())
+			{
+				IInteractionPromptHandler::Execute_ShowInteractionPrompt(Player, this,
+					NSLOCTEXT("CustomerNPC", "TalkPrompt", "Press E to talk"));
+			}
+			return; // range timer keeps running; StopInteractingPlayer fires when they leave
+		}
+	}
 
 	StopInteractingPlayer();
 }
