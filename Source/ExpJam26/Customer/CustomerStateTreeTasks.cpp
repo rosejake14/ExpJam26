@@ -111,11 +111,12 @@ EStateTreeRunStatus FStateTreeCustomerRoamTask::EnterState(FStateTreeExecutionCo
 		InstanceData.bIsWaiting = false;
 		InstanceData.WaitTimeRemaining = 0.0f;
 
-		// pick a random reachable point within the NPC's roam radius
+		// pick a random reachable point within the NPC's roam zone
 		const FVector RoamCenter = InstanceData.Character->GetEffectiveRoamCenter();
 		const float RoamRadius = InstanceData.Character->RoamRadius;
+		const FVector CurrentLocation = InstanceData.Character->GetActorLocation();
 
-		FVector TargetLocation = RoamCenter;
+		FVector TargetLocation = CurrentLocation;
 
 		UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(InstanceData.Character->GetWorld());
 		if (NavSys)
@@ -123,6 +124,12 @@ EStateTreeRunStatus FStateTreeCustomerRoamTask::EnterState(FStateTreeExecutionCo
 			FNavLocation NavLocation;
 			if (NavSys->GetRandomReachablePointInRadius(RoamCenter, RoamRadius, NavLocation))
 			{
+				TargetLocation = NavLocation.Location;
+			}
+			else
+			{
+				// zone query failed — wander from current position at a smaller radius
+				NavSys->GetRandomReachablePointInRadius(CurrentLocation, RoamRadius * 0.5f, NavLocation);
 				TargetLocation = NavLocation.Location;
 			}
 		}

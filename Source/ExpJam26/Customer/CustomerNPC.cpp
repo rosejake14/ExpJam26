@@ -389,7 +389,7 @@ void ACustomerNPC::OnRoamCycleCompleted()
 
 FVector ACustomerNPC::GetEffectiveRoamCenter() const
 {
-	return SpawnLocation;
+	return RoamCenter.IsZero() ? SpawnLocation : RoamCenter;
 }
 
 void ACustomerNPC::RandomizeNextShopTripCycles()

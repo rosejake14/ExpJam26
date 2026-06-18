@@ -69,7 +69,11 @@ protected:
 
 public:
 
-	/** Maximum distance the NPC will roam from where it was placed in the level */
+	/** Centre point the NPC roams around. If left at zero, defaults to the actor's spawn location. */
+	UPROPERTY(EditAnywhere, Category="Customer|Roam", BlueprintReadWrite)
+	FVector RoamCenter = FVector::ZeroVector;
+
+	/** Maximum distance the NPC will roam from RoamCenter (or spawn location if RoamCenter is zero) */
 	UPROPERTY(EditAnywhere, Category="Customer|Roam")
 	float RoamRadius = 1500.0f;
 
