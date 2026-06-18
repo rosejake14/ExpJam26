@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Inventory/InventoryComponent.h"
 #include "ExpJam26.h"
 
 AExpJam26Character::AExpJam26Character()
@@ -44,6 +45,49 @@ AExpJam26Character::AExpJam26Character()
 	GetCharacterMovement()->AirControl = 0.5f;
 }
 
+void AExpJam26Character::BeginPlay()
+{
+	Super::BeginPlay();
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AExpJam26Character::DoStartSprint()
+{
+	bSprinting = true;
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void AExpJam26Character::DoEndSprint()
+{
+	bSprinting = false;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AExpJam26Character::DoToggleDestroyMode()
+{
+	bDestroyModeActive = !bDestroyModeActive;
+	BP_OnDestroyModeChanged(bDestroyModeActive);
+}
+
+void AExpJam26Character::DoDestroySlot(int32 SlotIndex)
+{
+	if (!bDestroyModeActive)
+	{
+		return;
+	}
+
+	UInventoryComponent* Inventory = FindComponentByClass<UInventoryComponent>();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	Inventory->RemoveSlot(SlotIndex);
+
+	bDestroyModeActive = false;
+	BP_OnDestroyModeChanged(false);
+}
+
 void AExpJam26Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {	
 	// Set up action bindings
@@ -59,6 +103,31 @@ void AExpJam26Character::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		// Looking/Aiming
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AExpJam26Character::LookInput);
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AExpJam26Character::LookInput);
+
+		// Sprinting
+		if (SprintAction)
+		{
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AExpJam26Character::DoStartSprint);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AExpJam26Character::DoEndSprint);
+		}
+
+		// Destroy mode
+		if (DestroyModeAction)
+		{
+			EnhancedInputComponent->BindAction(DestroyModeAction, ETriggerEvent::Started, this, &AExpJam26Character::DoToggleDestroyMode);
+		}
+		if (DestroySlot1Action)
+		{
+			EnhancedInputComponent->BindAction(DestroySlot1Action, ETriggerEvent::Started, this, &AExpJam26Character::DoDestroySlot1);
+		}
+		if (DestroySlot2Action)
+		{
+			EnhancedInputComponent->BindAction(DestroySlot2Action, ETriggerEvent::Started, this, &AExpJam26Character::DoDestroySlot2);
+		}
+		if (DestroySlot3Action)
+		{
+			EnhancedInputComponent->BindAction(DestroySlot3Action, ETriggerEvent::Started, this, &AExpJam26Character::DoDestroySlot3);
+		}
 	}
 	else
 	{

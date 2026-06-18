@@ -123,7 +123,7 @@ void AItemPickup::CheckInteractionRange()
 	// add a buffer so this doesn't immediately trigger due to the interactor's own collision radius
 	const float MaxDistance = CollisionSphere->GetScaledSphereRadius() + 50.0f;
 
-	if (!Interactor || FVector::Dist(Interactor->GetActorLocation(), GetActorLocation()) > MaxDistance)
+	if (!Interactor || FVector::Dist2D(Interactor->GetActorLocation(), GetActorLocation()) > MaxDistance)
 	{
 		StopInteracting();
 	}

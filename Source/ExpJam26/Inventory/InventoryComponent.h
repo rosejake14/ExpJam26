@@ -64,6 +64,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Inventory")
 	bool RemoveItem(UItemDefinition* Item, int32 Quantity);
 
+	/**
+	 * Clears the entire stack in the given slot, regardless of item type.
+	 * @return True if the slot was non-empty and was cleared.
+	 */
+	UFUNCTION(BlueprintCallable, Category="Inventory")
+	bool RemoveSlot(int32 SlotIndex);
+
 	/** Returns the total quantity of Item held across all slots */
 	UFUNCTION(BlueprintPure, Category="Inventory")
 	int32 GetItemCount(UItemDefinition* Item) const;

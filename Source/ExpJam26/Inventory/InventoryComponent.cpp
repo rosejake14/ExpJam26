@@ -113,6 +113,18 @@ bool UInventoryComponent::RemoveItem(UItemDefinition* Item, int32 Quantity)
 	return true;
 }
 
+bool UInventoryComponent::RemoveSlot(int32 SlotIndex)
+{
+	if (!IsValidSlotIndex(SlotIndex) || Slots[SlotIndex].IsEmpty())
+	{
+		return false;
+	}
+
+	Slots[SlotIndex] = FItemStack();
+	BroadcastUpdate();
+	return true;
+}
+
 int32 UInventoryComponent::GetItemCount(UItemDefinition* Item) const
 {
 	int32 Total = 0;

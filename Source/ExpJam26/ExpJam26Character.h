@@ -48,11 +48,47 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* MouseLookAction;
-	
+
+	/** Sprint Input Action */
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* SprintAction;
+
+	/** Toggle destroy-mode Input Action */
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* DestroyModeAction;
+
+	/** Destroy item in slot 1 */
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* DestroySlot1Action;
+
+	/** Destroy item in slot 2 */
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* DestroySlot2Action;
+
+	/** Destroy item in slot 3 */
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* DestroySlot3Action;
+
+	/** Whether destroy mode is currently active */
+	bool bDestroyModeActive = false;
+
+	/** Walk speed when not sprinting */
+	UPROPERTY(EditAnywhere, Category="Movement")
+	float WalkSpeed = 350.0f;
+
+	/** Walk speed when sprinting */
+	UPROPERTY(EditAnywhere, Category="Movement")
+	float SprintSpeed = 650.0f;
+
+	/** Whether currently sprinting */
+	bool bSprinting = false;
+
 public:
 	AExpJam26Character();
 
 protected:
+
+	virtual void BeginPlay() override;
 
 	/** Called from Input Actions for movement input */
 	void MoveInput(const FInputActionValue& Value);
@@ -75,6 +111,31 @@ protected:
 	/** Handles jump end inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+
+	/** Handles sprint start from input or UI */
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoStartSprint();
+
+	/** Handles sprint end from input or UI */
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoEndSprint();
+
+	/** Toggles destroy mode on/off */
+	UFUNCTION(BlueprintCallable, Category="Input")
+	void DoToggleDestroyMode();
+
+	/** Called when destroy mode changes; override in Blueprint to update UI */
+	UFUNCTION(BlueprintImplementableEvent, Category="Inventory")
+	void BP_OnDestroyModeChanged(bool bActive);
+
+private:
+
+	/** Removes all items in SlotIndex if destroy mode is active, then exits destroy mode */
+	void DoDestroySlot(int32 SlotIndex);
+
+	void DoDestroySlot1() { DoDestroySlot(0); }
+	void DoDestroySlot2() { DoDestroySlot(1); }
+	void DoDestroySlot3() { DoDestroySlot(2); }
 
 protected:
 

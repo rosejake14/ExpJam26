@@ -7,8 +7,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SpotLightComponent.h"
-#include "EnhancedInputComponent.h"
-#include "InputAction.h"
 
 AHorrorCharacter::AHorrorCharacter()
 {
@@ -31,9 +29,6 @@ void AHorrorCharacter::BeginPlay()
 	// initialize sprint meter to max
 	SprintMeter = SprintTime;
 
-	// Initialize the walk speed
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-
 	// start the sprint tick timer
 	GetWorld()->GetTimerManager().SetTimer(SprintTimer, this, &AHorrorCharacter::SprintFixedTick, SprintFixedTickTime, true);
 }
@@ -44,22 +39,6 @@ void AHorrorCharacter::EndPlay(EEndPlayReason::Type EndPlayReason)
 
 	// clear the sprint timer
 	GetWorld()->GetTimerManager().ClearTimer(SprintTimer);
-}
-
-void AHorrorCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	{
-		// Set up action bindings
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-		{
-			// Sprinting
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AHorrorCharacter::DoStartSprint);
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AHorrorCharacter::DoEndSprint);
-
-		}
-	}
 }
 
 void AHorrorCharacter::DoStartSprint()

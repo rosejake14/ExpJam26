@@ -119,7 +119,7 @@ void ACustomerNPC::CheckInteractionRange()
 	const float MaxDistance = InteractionSphere->GetScaledSphereRadius() + 50.0f;
 	AActor* Player = InteractingPlayer.Get();
 
-	if (!Player || FVector::Dist(Player->GetActorLocation(), GetActorLocation()) > MaxDistance)
+	if (!Player || FVector::Dist2D(Player->GetActorLocation(), GetActorLocation()) > MaxDistance)
 	{
 		if (bIsBeingInteracted)
 		{
