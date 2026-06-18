@@ -219,7 +219,14 @@ EStateTreeRunStatus FStateTreeGoToShopTask::EnterState(FStateTreeExecutionContex
 			return EStateTreeRunStatus::Failed;
 		}
 
-		const FVector SlotPosition = Queue->JoinQueue(Character);
+		FVector SlotPosition;
+		if (!Queue->JoinQueue(Character, SlotPosition))
+		{
+			// Queue is full — abandon the shop visit and go back to roaming
+			Character->bWantsToGoToShop = false;
+			return EStateTreeRunStatus::Failed;
+		}
+
 		InstanceData.bHasJoinedQueue = true;
 		InstanceData.bWasOrderVisit = Character->bHasActiveRequest;
 

@@ -10,14 +10,19 @@ UShopQueueComponent::UShopQueueComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-FVector UShopQueueComponent::JoinQueue(ACustomerNPC* NPC)
+bool UShopQueueComponent::JoinQueue(ACustomerNPC* NPC, FVector& OutSlotPosition)
 {
 	PurgeStaleEntries();
 
+	if (Queue.Num() >= MaxQueueSize)
+	{
+		return false;
+	}
+
 	const int32 SlotIndex = Queue.Num();
 	Queue.Add(TWeakObjectPtr<ACustomerNPC>(NPC));
-
-	return CalculateSlotPosition(SlotIndex);
+	OutSlotPosition = CalculateSlotPosition(SlotIndex);
+	return true;
 }
 
 void UShopQueueComponent::LeaveQueue(ACustomerNPC* NPC)

@@ -27,6 +27,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop Queue")
 	float SlotSpacing = 90.0f;
 
+	/** Maximum number of customers allowed in the queue at once */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop Queue", meta=(ClampMin=1))
+	int32 MaxQueueSize = 4;
+
 	/** Queue extends in this direction relative to the shop actor's local space.
 	 *  Default (-1,0,0) places the queue in front of an actor facing +X. */
 	UPROPERTY(EditAnywhere, Category="Shop Queue")
@@ -41,8 +45,8 @@ public:
 
 	UShopQueueComponent();
 
-	/** Adds the NPC to the back of the queue and returns the world position it should walk to */
-	FVector JoinQueue(ACustomerNPC* NPC);
+	/** Tries to add the NPC to the back of the queue. Returns false if the queue is full. */
+	bool JoinQueue(ACustomerNPC* NPC, FVector& OutSlotPosition);
 
 	/** Removes the NPC from the queue. Remaining NPCs behind it are shifted forward. */
 	void LeaveQueue(ACustomerNPC* NPC);
