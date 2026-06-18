@@ -5,6 +5,35 @@
 #include "InventoryComponent.h"
 #include "ItemDragDropOperation.h"
 #include "InputCoreTypes.h"
+#include "Components/Image.h"
+#include "Components/TextBlock.h"
+#include "Blueprint/WidgetTree.h"
+#include "ExpJam26.h"
+
+void UInventorySlotWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	SlotIcon     = Cast<UImage>(GetWidgetFromName(TEXT("Icon")));
+	SlotQuantity = Cast<UTextBlock>(GetWidgetFromName(TEXT("Quantity")));
+
+	// If name lookup failed, find by type and log real names so we can fix them
+	if (!SlotIcon || !SlotQuantity)
+	{
+		WidgetTree->ForEachWidget([&](UWidget* Widget)
+		{
+			UE_LOG(LogExpJam26, Log, TEXT("  SlotWidget child: '%s' (%s)"),
+				*Widget->GetName(), *Widget->GetClass()->GetName());
+
+			if (!SlotIcon)     { SlotIcon     = Cast<UImage>(Widget); }
+			if (!SlotQuantity) { SlotQuantity = Cast<UTextBlock>(Widget); }
+		});
+	}
+
+	UE_LOG(LogExpJam26, Log, TEXT("InventorySlotWidget NativeConstruct — Icon: %s, Quantity: %s"),
+		SlotIcon     ? TEXT("OK") : TEXT("NULL"),
+		SlotQuantity ? TEXT("OK") : TEXT("NULL"));
+}
 
 void UInventorySlotWidget::SetSlot(UInventoryComponent* InInventory, int32 InSlotIndex)
 {
@@ -109,4 +138,40 @@ void UInventorySlotWidget::HandleInventoryUpdated()
 void UInventorySlotWidget::RefreshSlot()
 {
 	BP_UpdateSlot(Inventory ? Inventory->GetSlot(SlotIndex) : FItemStack());
+}
+
+void UInventorySlotWidget::BP_UpdateSlot_Implementation(const FItemStack& Stack)
+{
+	const bool bHasItem = Stack.Item != nullptr && Stack.Quantity > 0;
+
+	UE_LOG(LogExpJam26, Log, TEXT("BP_UpdateSlot slot %d — Item: %s, Icon widget: %s"),
+		SlotIndex,
+		bHasItem ? *Stack.Item->DisplayName.ToString() : TEXT("empty"),
+		SlotIcon ? TEXT("OK") : TEXT("NULL"));
+
+	if (SlotIcon)
+	{
+		if (bHasItem)
+		{
+			SlotIcon->SetBrushFromTexture(Stack.Item->Icon.Get());
+			SlotIcon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		}
+		else
+		{
+			SlotIcon->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+
+	if (SlotQuantity)
+	{
+		if (bHasItem && Stack.Quantity > 1)
+		{
+			SlotQuantity->SetText(FText::AsNumber(Stack.Quantity));
+			SlotQuantity->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		}
+		else
+		{
+			SlotQuantity->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
 }

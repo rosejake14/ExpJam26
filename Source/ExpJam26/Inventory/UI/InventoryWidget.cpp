@@ -26,8 +26,8 @@ void UInventoryWidget::BuildSlots()
 	{
 		if (UInventorySlotWidget* SlotWidget = CreateWidget<UInventorySlotWidget>(this, SlotWidgetClass))
 		{
+			SlotContainer->AddChild(SlotWidget);   // NativeConstruct fires here, resolving widget refs
 			SlotWidget->SetSlot(Inventory, SlotIndex);
-			SlotContainer->AddChild(SlotWidget);
 		}
 	}
 }

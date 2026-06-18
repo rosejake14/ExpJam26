@@ -31,7 +31,7 @@ public:
 
 	/** Icon shown in inventory and crafting UI slots */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item")
-	TSoftObjectPtr<UTexture2D> Icon;
+	TObjectPtr<UTexture2D> Icon;
 
 	/** Mesh used to represent this item when it's dropped in the world as a pickup */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Item")

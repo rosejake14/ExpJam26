@@ -9,6 +9,8 @@
 
 class UInventoryComponent;
 class UDragDropOperation;
+class UImage;
+class UTextBlock;
 
 /**
  *  Represents a single slot of an inventory in UI. Supports dragging its
@@ -36,6 +38,9 @@ public:
 
 protected:
 
+	/** Resolves Icon and Quantity widget references by name */
+	virtual void NativeConstruct() override;
+
 	/** Unbinds from Inventory's update delegate */
 	virtual void NativeDestruct() override;
 
@@ -54,6 +59,9 @@ protected:
 	/** Notifies Blueprint that a dragged stack has left this slot */
 	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
+	UImage* SlotIcon = nullptr;
+	UTextBlock* SlotQuantity = nullptr;
+
 	/** Bound to Inventory's update delegate, refreshes this slot's display */
 	UFUNCTION()
 	void HandleInventoryUpdated();
@@ -61,8 +69,8 @@ protected:
 	/** Refreshes this slot's display from the current contents of Inventory/SlotIndex */
 	void RefreshSlot();
 
-	/** Passes the current contents of this slot to Blueprint to update its visuals */
-	UFUNCTION(BlueprintImplementableEvent, Category="Inventory", meta = (DisplayName = "Update Slot"))
+	/** Updates this slot's visuals from the given stack. C++ handles it; Blueprint may override. */
+	UFUNCTION(BlueprintNativeEvent, Category="Inventory", meta = (DisplayName = "Update Slot"))
 	void BP_UpdateSlot(const FItemStack& Stack);
 
 	/** Lets Blueprint build the floating widget shown while dragging this slot's stack */
