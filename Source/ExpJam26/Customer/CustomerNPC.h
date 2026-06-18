@@ -13,6 +13,7 @@ class UInputAction;
 class UCraftingRecipe;
 class UInventoryComponent;
 class UMoneyComponent;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCustomerNPCInteractionChangedDelegate);
 
@@ -50,6 +51,18 @@ protected:
 	/** Input action bound to declining a recipe request (e.g. IA_Decline / F key) */
 	UPROPERTY(EditDefaultsOnly, Category="Customer|Interaction")
 	TObjectPtr<UInputAction> DeclineAction;
+
+	/** Sound played at random intervals while the NPC is alive */
+	UPROPERTY(EditAnywhere, Category="Customer|Dialogue")
+	TObjectPtr<USoundBase> IdleSound;
+
+	/** Minimum seconds between idle sound plays */
+	UPROPERTY(EditAnywhere, Category="Customer|Dialogue", meta=(ClampMin=0.1f))
+	float IdleSoundIntervalMin = 5.0f;
+
+	/** Maximum seconds between idle sound plays */
+	UPROPERTY(EditAnywhere, Category="Customer|Dialogue", meta=(ClampMin=0.1f))
+	float IdleSoundIntervalMax = 10.0f;
 
 	/** Lines of dialogue cycled through when the player presses E */
 	UPROPERTY(EditAnywhere, Category="Customer|Dialogue")
@@ -148,6 +161,8 @@ private:
 
 	/** Polls interaction range every 0.2s, same pattern as AItemPickup */
 	FTimerHandle InteractionRangeCheckTimer;
+
+	FTimerHandle IdleSoundTimer;
 
 public:
 
@@ -249,6 +264,9 @@ private:
 
 	/** Randomizes the number of roam cycles before the next shop visit */
 	void RandomizeNextShopTripCycles();
+
+	void ScheduleNextIdleSound();
+	void PlayIdleSound();
 
 	/** True when the NPC has shown the recipe prompt and is waiting for the player to accept/decline */
 	bool bShowingRecipePrompt = false;

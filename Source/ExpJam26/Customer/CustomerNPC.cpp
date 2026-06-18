@@ -17,6 +17,7 @@
 #include "Inventory/MoneyComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 ACustomerNPC::ACustomerNPC()
 {
@@ -55,6 +56,28 @@ void ACustomerNPC::BeginPlay()
 
 	SpawnLocation = GetActorLocation();
 	RandomizeNextShopTripCycles();
+	ScheduleNextIdleSound();
+}
+
+void ACustomerNPC::ScheduleNextIdleSound()
+{
+	if (!IdleSound)
+	{
+		return;
+	}
+
+	const float Delay = FMath::RandRange(IdleSoundIntervalMin, IdleSoundIntervalMax);
+	GetWorld()->GetTimerManager().SetTimer(IdleSoundTimer, this, &ACustomerNPC::PlayIdleSound, Delay, false);
+}
+
+void ACustomerNPC::PlayIdleSound()
+{
+	if (IdleSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, IdleSound, GetActorLocation());
+	}
+
+	ScheduleNextIdleSound();
 }
 
 void ACustomerNPC::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -62,6 +85,7 @@ void ACustomerNPC::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 
 	GetWorld()->GetTimerManager().ClearTimer(InteractionRangeCheckTimer);
+	GetWorld()->GetTimerManager().ClearTimer(IdleSoundTimer);
 }
 
 void ACustomerNPC::OnInteractionSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -197,6 +221,11 @@ void ACustomerNPC::BeginInteraction(AActor* Player)
 	if (DialogueWidget)
 	{
 		DialogueWidget->SetHiddenInGame(false);
+	}
+
+	if (IdleSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, IdleSound, GetActorLocation());
 	}
 
 	// create the HUD widget first, then push the first line into it

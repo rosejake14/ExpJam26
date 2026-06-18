@@ -20,11 +20,11 @@ class EXPJAM26_API UShopQueueComponent : public UActorComponent
 protected:
 
 	/** Distance from the shop actor origin to the front-of-queue slot */
-	UPROPERTY(EditAnywhere, Category="Shop Queue")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop Queue")
 	float FrontOfQueueDistance = 150.0f;
 
 	/** Gap between successive queue slots */
-	UPROPERTY(EditAnywhere, Category="Shop Queue")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Shop Queue")
 	float SlotSpacing = 90.0f;
 
 	/** Queue extends in this direction relative to the shop actor's local space.
